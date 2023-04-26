@@ -6,24 +6,25 @@ import pafy
 import pandas as pd
 import time
 
-# Load the PyTorch model
+# Loads the PyTorch model and yolov5 repository for exporting information
 model = torch.hub.load('ultralytics/yolov5', 'custom', path= "best.pt")
 model.eval()
 previous_label = None
 frame_count = 0
-# Initialize the text to speech engine
+# Initialises the text-to-speech algorithm
 engine = pyttsx3.init()
 
-# Define the function to make predictions and narrate the results
+# Defining the function to create and narrate predictions
 def predict(frame):
     global previous_label, frame_count
+    # resizing the frame to a square image, matching the input size of the model
     resized_frame = cv2.resize(frame,(1248,1248))
-    # Resize the frame to match the input size of the model
+    # Creating predictions and store them
     results = model(frame)
     #Creates a pandas dataframe that stores all predictions, confidences and locations for bounding box
     df = results.pandas().xyxy[0]
 
-    # Get the label of the predicted class
+    # Storing the labels for each prediction
     labels = {1: 'regulatory--keep-right--g1',
         2: 'regulatory--priority-over-oncoming-vehicles--g1',
         4: 'regulatory--maximum-speed-limit-35--g2',
@@ -130,7 +131,7 @@ def predict(frame):
             #Applies a threshold for the maximum confidence 
             if max_conf >=0.7:
 
-                # Formates the best prediction a string compativle with the text-to-speech engine
+                # Formats the best prediction a string for the text-to-speech engine
                 current_prediction =df.loc[df['confidence'] == max_conf,'class'].values[0]
                 text = labels[int(current_prediction)]
                 text = text.split("--")
@@ -150,38 +151,37 @@ def predict(frame):
                     engine.say(text)
                     engine.runAndWait()
             
-# Initialize the video capture device
+# Initializes the video
 cap = cv2.VideoCapture(0)
 fps = int(cap.get(cv2.CAP_PROP_FPS))
 width= int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
 height= int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
 writer= cv2.VideoWriter('basicvideo.mp4', cv2.VideoWriter_fourcc(*'DIVX'), 20, (width,height))
-# Loop over the frames from the video capture device
+# Loops over teach frame of the video
 numberofframes = 0
 start = time.time()
 while True:
-    
-    # Read a frame from the video capture device
     numberofframes += 1
+    # Reads each frame
     ret, frame = cap.read()
 
-    # Check if the frame was successfully read
+    # Checks if the frame was successfully read
     if not ret:
         break
 
-    # Display the frame
+    # Showing the frame in a window - used for illustrating testing but can comment out
     cv2.imshow("frame", frame)
     # Make a prediction and narrate the results
-
     predict(frame)
-    # Check if the user has pressed the "q" key to quit
+
+    # Check if the user has pressed the "q" key to terminate the while loop
     if cv2.waitKey(1) == ord("q"):
         break
-# Release the video capture device and close the window
+# Terminates the video
 cap.release()
 cv2.destroyAllWindows()
-
+# Calculates the duration and framerate
 duration = time.time() -start
 print(duration)
 framerate = numberofframes// duration
